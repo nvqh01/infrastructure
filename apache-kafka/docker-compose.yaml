@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  kafka:
+    # Reference: https://www.saybackend.com/blog/05-kafka-in-docker-kraft/
+    # Reference: https://dev.to/deeshath/apache-kafka-kraft-mode-setup-5nj
+    container_name: broker
+    image: apache/kafka:latest
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "./opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    ports:
+      - "9094:9094"
+    restart: on-failure
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - volume:/var/lib/kafka/data
+    networks:
+      - network
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080"
+    restart: on-failure
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:9092
+      KAFKA_CLUSTERS_0_READONLY: "false"
+    networks:
+      - network
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  volume:
+    name: infrastructure_apache_kafka
+
+networks:
+  network:
+    driver: bridge
+    name: infrastructure_apache_kafka

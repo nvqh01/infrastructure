@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  redis:
+    container_name: redis
+    image: redis:latest
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    ports:
+      - '6379:6379'
+    restart: on-failure
+    volumes:
+      - volume:/data
+    networks:
+      - network
+
+volumes:
+  volume:
+    name: infrastructure_redis
+
+networks:
+  network:
+    driver: bridge
+    name: infrastructure_redis
